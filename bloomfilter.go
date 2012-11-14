@@ -7,8 +7,10 @@ import "math"
 
 // TODO
 // 1. Allow the user to supply a hash function?
-// 2. Support for concurrent inserts?
+// 2. Support for concurrent inserts? (Maybe not)
 // 3. Do performance testing
+// 4. Counting Bloom Filters
+// 5. Scalable Bloom Filters
 
 type BloomFilter struct {
 	bitmap []bool      // The bloom-filter bitmap
