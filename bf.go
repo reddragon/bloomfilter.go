@@ -3,9 +3,10 @@ package main
 import "fmt"
 import "hash"
 import "hash/fnv"
+import "math"
 
 // TODO
-// 1. Allow the user to specify a hash function?
+// 1. Allow the user to supply a hash function?
 // 2. Support for concurrent inserts?
 // 3. Do performance testing
 
@@ -28,7 +29,7 @@ func newBloomFilter(k, m int) *BloomFilter {
 
 func (bf *BloomFilter) getHash(b []byte) (uint32, uint32) {
 	bf.hashfn.Reset()
-	bf.hashfn.Sum(b)
+	bf.hashfn.Write(b)
 	hash64 := bf.hashfn.Sum64()
 	h1 := uint32(hash64 & ((1 << 32) - 1))
 	h2 := uint32(hash64 >> 32)
@@ -41,6 +42,7 @@ func (bf *BloomFilter) add(e []byte) {
 		ind := (h1 + uint32(i)*h2) % uint32(bf.m)
 		bf.bitmap[ind] = true
 	}
+	bf.n++
 }
 
 func (bf *BloomFilter) check(x []byte) bool {
@@ -53,10 +55,15 @@ func (bf *BloomFilter) check(x []byte) bool {
 	return result
 }
 
+func (bf *BloomFilter) falsePositiveRate() float64 {
+	return math.Pow((1 - math.Exp(-float64(bf.k * bf.n) / 
+					float64(bf.m))), float64(bf.k))
+}
+
 func main() {
-	fmt.Println("Testing out the Bloom Filter")
-	bf := newBloomFilter(10, 20)
-	data := []byte("Hello")
-	bf.add(data)
-	fmt.Println(bf.check(data))
+	bf := newBloomFilter(3, 100)
+	d1, d2 := []byte("Hello"), []byte("Jello")
+	bf.add(d1)
+	fmt.Println(bf.check(d1), bf.check(d2))
+	fmt.Println("False Positive Rate: ", bf.falsePositiveRate())
 }
