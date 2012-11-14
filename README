@@ -1,4 +1,0 @@
-# bloomfilter.go
-## A Bloom Filter implementation in GoLang
-
-Currently a very simple implementation. I would like to add tests and other goodies soon.
