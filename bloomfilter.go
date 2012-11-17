@@ -95,7 +95,7 @@ func (cbf *CountingBloomFilter) add(e []byte) {
 	h1, h2 := cbf.getHash(e)
 	for i := 0; i < cbf.k; i++ {
 		ind := (h1 + uint32(i)*h2) % uint32(cbf.m)
-		// TODO assert()
+		// Guarding against an overflow
 		if cbf.counts[ind] < 0xFF {
 			cbf.counts[ind] += 1
 		}
