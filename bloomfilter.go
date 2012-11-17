@@ -1,9 +1,10 @@
-package main
+package bloomfilter
 
-import "fmt"
-import "hash"
-import "hash/fnv"
-import "math"
+import (
+	"hash"
+	"hash/fnv"
+	"math"
+)
 
 // TODO
 // 1. Allow the user to supply a hash function?
@@ -60,12 +61,4 @@ func (bf *BloomFilter) check(x []byte) bool {
 func (bf *BloomFilter) falsePositiveRate() float64 {
 	return math.Pow((1 - math.Exp(-float64(bf.k*bf.n)/
 		float64(bf.m))), float64(bf.k))
-}
-
-func main() {
-	bf := newBloomFilter(3, 100)
-	d1, d2 := []byte("Hello"), []byte("Jello")
-	bf.add(d1)
-	fmt.Println(bf.check(d1), bf.check(d2))
-	fmt.Println("False Positive Rate: ", bf.falsePositiveRate())
 }
