@@ -12,10 +12,12 @@ import (
 // 3. Do performance testing
 // 4. Counting Bloom Filters
 // 5. Scalable Bloom Filters
+// 6. Find a good bitset package
+// 7. Replace bool array in BloomFilter by a bitset
 
 type BloomFilter struct {
 	bitmap []bool      // The bloom-filter bitmap
-	k      int         // The number of hash functions
+	k      int         // Number of hash functions
 	n      int         // Number of elements in the filter
 	m      int         // Size of the bloom filter
 	hashfn hash.Hash64 // The hash function
@@ -61,4 +63,65 @@ func (bf *BloomFilter) check(x []byte) bool {
 func (bf *BloomFilter) falsePositiveRate() float64 {
 	return math.Pow((1 - math.Exp(-float64(bf.k*bf.n)/
 		float64(bf.m))), float64(bf.k))
+}
+
+type CountingBloomFilter struct {
+	counts []uint8     // The bloom-filter bitmap
+	k      int         // Number of hash functions
+	n      int         // Number of elements in the filter
+	m      int         // Size of the bloom filter
+	hashfn hash.Hash64 // The hash function
+}
+
+func newCountingBloomFilter(k, m int) *CountingBloomFilter {
+	cbf := new(CountingBloomFilter)
+	cbf.counts = make([]uint8, m)
+	cbf.k, cbf.m = k, m
+	cbf.n = 0
+	cbf.hashfn = fnv.New64()
+	return cbf
+}
+
+func (cbf *CountingBloomFilter) getHash(b []byte) (uint32, uint32) {
+	cbf.hashfn.Reset()
+	cbf.hashfn.Write(b)
+	hash64 := cbf.hashfn.Sum64()
+	h1 := uint32(hash64 & ((1 << 32) - 1))
+	h2 := uint32(hash64 >> 32)
+	return h1, h2
+}
+
+func (cbf *CountingBloomFilter) add(e []byte) {
+	h1, h2 := cbf.getHash(e)
+	for i := 0; i < cbf.k; i++ {
+		ind := (h1 + uint32(i)*h2) % uint32(cbf.m)
+		// TODO assert()
+		if cbf.counts[ind] < 0xFF {
+			cbf.counts[ind] += 1
+		}
+	}
+	cbf.n++
+}
+
+func (cbf *CountingBloomFilter) remove(e []byte) {
+	h1, h2 := cbf.getHash(e)
+	for i := 0; i < cbf.k; i++ {
+		ind := (h1 + uint32(i)*h2) % uint32(cbf.m)
+
+		if cbf.counts[ind] > 0 {
+			// Guarding against an underflow
+			cbf.counts[ind] -= 1
+		}
+	}
+	cbf.n--
+}
+
+func (cbf *CountingBloomFilter) check(x []byte) bool {
+	h1, h2 := cbf.getHash(x)
+	result := true
+	for i := 0; i < cbf.k; i++ {
+		ind := (h1 + uint32(i)*h2) % uint32(cbf.m)
+		result = result && (cbf.counts[ind] > 0)
+	}
+	return result
 }
