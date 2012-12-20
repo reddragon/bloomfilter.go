@@ -1,9 +1,9 @@
 package bloomfilter
 
 import (
+	"encoding/binary"
+	"fmt"
 	"testing"
-
-//"fmt"
 )
 
 func TestBasic(t *testing.T) {
@@ -20,7 +20,7 @@ func TestBasic(t *testing.T) {
 	}
 }
 
-func TestCountingBasic(t *testing.T) {
+func TestCountingBFBasic(t *testing.T) {
 	cbf := newCountingBloomFilter(3, 100)
 	d1 := []byte("Hello")
 	cbf.add(d1)
@@ -34,4 +34,16 @@ func TestCountingBasic(t *testing.T) {
 	if cbf.check(d1) {
 		t.Errorf("d1 should be absent from the BloomFilter after deletion")
 	}
+}
+
+func TestScalableBFBasic(t *testing.T) {
+	sbf := newScalableBloomFilter(3, 100, 3, 10, 0.01)
+	buf := make([]byte, 8)
+
+	for i := 1; i < 100; i++ {
+		binary.PutVarint(buf, int64(i))
+		sbf.add(buf)
+		fmt.Println("False Positive Rate: ", sbf.falsePositiveRate())
+	}
+
 }

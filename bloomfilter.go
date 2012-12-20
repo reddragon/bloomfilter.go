@@ -1,19 +1,12 @@
+//package main
 package bloomfilter
 
 import (
+	"fmt"
 	"hash"
 	"hash/fnv"
 	"math"
 )
-
-// TODO
-// 1. Allow the user to supply a hash function?
-// 2. Support for concurrent inserts? (Maybe not)
-// 3. Do performance testing
-// 4. Counting Bloom Filters
-// 5. Scalable Bloom Filters
-// 6. Find a good bitset package
-// 7. Replace bool array in BloomFilter by a bitset
 
 type BloomFilter struct {
 	bitmap []bool      // The bloom-filter bitmap
@@ -29,6 +22,7 @@ func newBloomFilter(k, m int) *BloomFilter {
 	bf.k, bf.m = k, m
 	bf.n = 0
 	bf.hashfn = fnv.New64()
+	fmt.Printf("Creating a new Bloom Filter of size %d, with %d hash functions.\n", bf.m, bf.k)
 	return bf
 }
 
@@ -124,4 +118,69 @@ func (cbf *CountingBloomFilter) check(x []byte) bool {
 		result = result && (cbf.counts[ind] > 0)
 	}
 	return result
+}
+
+type ScalableBloomFilter struct {
+	bfArr []BloomFilter // The list of Bloom Filters
+	k     int           // Number of hash functions
+	n     int           // Number of elements in the filter
+	m     int           // Size of the smallest bloom filter
+	p     int           // Maximum number of bloom filters to support. 	
+	q     int           // Number of bloom filters present in the list.
+	r     int           // Multiplication factor for new bloom filter sizes
+	s     int           // Size of the current bloom filter
+	f     float64       // Target False Positive rate / bf
+}
+
+func newScalableBloomFilter(k, m, p, r int, f float64) *ScalableBloomFilter {
+	sbf := new(ScalableBloomFilter)
+	sbf.k, sbf.n, sbf.m, sbf.p, sbf.q, sbf.r, sbf.f = k, 0, m, p, 1, r, f
+	sbf.s = sbf.m
+	sbf.bfArr = make([]BloomFilter, 0, p)
+	bf := newBloomFilter(sbf.k, sbf.m)
+	sbf.bfArr = append(sbf.bfArr, *bf)
+	return sbf
+}
+
+func (sbf *ScalableBloomFilter) add(e []byte) {
+	inuseFilter := sbf.q - 1
+	fpr := sbf.bfArr[inuseFilter].falsePositiveRate()
+	fmt.Printf("The in-use Bloom Filter is %d, with false positive rate: %f\n", inuseFilter, fpr)
+	if fpr <= sbf.f {
+		sbf.bfArr[inuseFilter].add(e)
+		sbf.n++
+		fmt.Printf("The in-use Bloom Filter is good enough, and the new false positive rate is %f\n", sbf.bfArr[inuseFilter].falsePositiveRate())
+	} else {
+		if sbf.p == sbf.q {
+			fmt.Printf("Cannot create any new Bloom Filters, reached the limit of %d filters, with a total of %d elements\n", sbf.p, sbf.n)
+			return
+		}
+		sbf.s = sbf.s * sbf.r
+		bf := newBloomFilter(sbf.k, sbf.s)
+		sbf.bfArr = append(sbf.bfArr, *bf)
+		sbf.q++
+		inuseFilter = sbf.q - 1
+		sbf.bfArr[inuseFilter].add(e)
+		sbf.n++
+		fmt.Printf("Created a new Bloom Filter, and the new false positive rate is %f\n", sbf.bfArr[inuseFilter].falsePositiveRate())
+	}
+}
+
+func (sbf *ScalableBloomFilter) falsePositiveRate() float64 {
+	res := 1.0
+	for i := 0; i < sbf.q; i++ {
+		res *= (1.0 - sbf.bfArr[i].falsePositiveRate())
+	}
+	return 1.0 - res
+}
+
+func (sbf *ScalableBloomFilter) check(e []byte) bool {
+	for i := 0; i < sbf.q; i++ {
+		if sbf.bfArr[i].check(e) {
+			fmt.Println("Element found in filter ", i)
+			return true
+		}
+	}
+	fmt.Println("Element not found")
+	return false
 }
