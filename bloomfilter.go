@@ -51,7 +51,7 @@ func (bf *BloomFilter) check(x []byte) bool {
 	return result
 }
 
-func (bf *BloomFilter) falsePositiveRate() float64 {
+func (bf *BloomFilter) FalsePositiveRate() float64 {
 	return math.Pow((1 - math.Exp(-float64(bf.k*bf.n)/
 		float64(bf.m))), float64(bf.k))
 }
@@ -141,7 +141,7 @@ func newScalableBloomFilter(k, m, p, r int, f float64) *ScalableBloomFilter {
 
 func (sbf *ScalableBloomFilter) add(e []byte) {
 	inuseFilter := sbf.q - 1
-	fpr := sbf.bfArr[inuseFilter].falsePositiveRate()
+	fpr := sbf.bfArr[inuseFilter].FalsePositiveRate()
 	if fpr <= sbf.f {
 		sbf.bfArr[inuseFilter].add(e)
 		sbf.n++
@@ -162,7 +162,7 @@ func (sbf *ScalableBloomFilter) add(e []byte) {
 func (sbf *ScalableBloomFilter) falsePositiveRate() float64 {
 	res := 1.0
 	for i := 0; i < sbf.q; i++ {
-		res *= (1.0 - sbf.bfArr[i].falsePositiveRate())
+		res *= (1.0 - sbf.bfArr[i].FalsePositiveRate())
 	}
 	return 1.0 - res
 }

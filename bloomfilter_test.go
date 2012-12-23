@@ -41,14 +41,13 @@ func TestScalableBFBasic(t *testing.T) {
 	for i := 1; i < 1000; i++ {
 		buf := make([]byte, 8)
 		binary.PutVarint(buf, int64(i))
-		//fmt.Println(buf)
 		sbf.add(buf)
 		if !sbf.check(buf) {
 			t.Errorf("%d should be present in the BloomFilter", i)
 			return
 		}
 	}
-	
+
 	for i := 1; i < 1000; i++ {
 		buf := make([]byte, 8)
 		binary.PutVarint(buf, int64(i))
@@ -59,23 +58,23 @@ func TestScalableBFBasic(t *testing.T) {
 	}
 
 	count := 0
-	
+
 	for i := 1000; i < 4000; i++ {
-		buf := make([]byte, 8)	
+		buf := make([]byte, 8)
 		binary.PutVarint(buf, int64(i))
 		if sbf.check(buf) {
 			count++
 		}
 	}
-	
+
 	if sbf.falsePositiveRate() > 0.04 {
 		t.Errorf("False Positive Rate for this test should be < 0.04")
-		return;
+		return
 	}
 
 	sensitivity := 0.01 // TODO Make this configurable
-	expectedFalsePositives := 
-		(int)((4000-1000) * (sbf.falsePositiveRate() + sensitivity))
+	expectedFalsePositives :=
+		(int)((4000 - 1000) * (sbf.falsePositiveRate() + sensitivity))
 	if count > expectedFalsePositives {
 		t.Errorf("Actual false positives %d is greater than max expected false positives %d",
 			count,
