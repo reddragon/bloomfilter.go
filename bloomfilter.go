@@ -14,7 +14,7 @@ type BloomFilter struct {
 	hashfn hash.Hash64 // The hash function
 }
 
-func newBloomFilter(k, m int) *BloomFilter {
+func NewBloomFilter(k, m int) *BloomFilter {
 	bf := new(BloomFilter)
 	bf.bitmap = make([]bool, m)
 	bf.k, bf.m = k, m
@@ -32,7 +32,7 @@ func (bf *BloomFilter) getHash(b []byte) (uint32, uint32) {
 	return h1, h2
 }
 
-func (bf *BloomFilter) add(e []byte) {
+func (bf *BloomFilter) Add(e []byte) {
 	h1, h2 := bf.getHash(e)
 	for i := 0; i < bf.k; i++ {
 		ind := (h1 + uint32(i)*h2) % uint32(bf.m)
@@ -41,7 +41,7 @@ func (bf *BloomFilter) add(e []byte) {
 	bf.n++
 }
 
-func (bf *BloomFilter) check(x []byte) bool {
+func (bf *BloomFilter) Check(x []byte) bool {
 	h1, h2 := bf.getHash(x)
 	result := true
 	for i := 0; i < bf.k; i++ {
@@ -64,7 +64,7 @@ type CountingBloomFilter struct {
 	hashfn hash.Hash64 // The hash function
 }
 
-func newCountingBloomFilter(k, m int) *CountingBloomFilter {
+func NewCountingBloomFilter(k, m int) *CountingBloomFilter {
 	cbf := new(CountingBloomFilter)
 	cbf.counts = make([]uint8, m)
 	cbf.k, cbf.m = k, m
@@ -82,7 +82,7 @@ func (cbf *CountingBloomFilter) getHash(b []byte) (uint32, uint32) {
 	return h1, h2
 }
 
-func (cbf *CountingBloomFilter) add(e []byte) {
+func (cbf *CountingBloomFilter) Add(e []byte) {
 	h1, h2 := cbf.getHash(e)
 	for i := 0; i < cbf.k; i++ {
 		ind := (h1 + uint32(i)*h2) % uint32(cbf.m)
@@ -94,7 +94,7 @@ func (cbf *CountingBloomFilter) add(e []byte) {
 	cbf.n++
 }
 
-func (cbf *CountingBloomFilter) remove(e []byte) {
+func (cbf *CountingBloomFilter) Remove(e []byte) {
 	h1, h2 := cbf.getHash(e)
 	for i := 0; i < cbf.k; i++ {
 		ind := (h1 + uint32(i)*h2) % uint32(cbf.m)
@@ -107,7 +107,7 @@ func (cbf *CountingBloomFilter) remove(e []byte) {
 	cbf.n--
 }
 
-func (cbf *CountingBloomFilter) check(x []byte) bool {
+func (cbf *CountingBloomFilter) Check(x []byte) bool {
 	h1, h2 := cbf.getHash(x)
 	result := true
 	for i := 0; i < cbf.k; i++ {
@@ -129,37 +129,37 @@ type ScalableBloomFilter struct {
 	f     float64       // Target False Positive rate / bf
 }
 
-func newScalableBloomFilter(k, m, p, r int, f float64) *ScalableBloomFilter {
+func NewScalableBloomFilter(k, m, p, r int, f float64) *ScalableBloomFilter {
 	sbf := new(ScalableBloomFilter)
 	sbf.k, sbf.n, sbf.m, sbf.p, sbf.q, sbf.r, sbf.f = k, 0, m, p, 1, r, f
 	sbf.s = sbf.m
 	sbf.bfArr = make([]BloomFilter, 0, p)
-	bf := newBloomFilter(sbf.k, sbf.m)
+	bf := NewBloomFilter(sbf.k, sbf.m)
 	sbf.bfArr = append(sbf.bfArr, *bf)
 	return sbf
 }
 
-func (sbf *ScalableBloomFilter) add(e []byte) {
+func (sbf *ScalableBloomFilter) Add(e []byte) {
 	inuseFilter := sbf.q - 1
 	fpr := sbf.bfArr[inuseFilter].FalsePositiveRate()
 	if fpr <= sbf.f {
-		sbf.bfArr[inuseFilter].add(e)
+		sbf.bfArr[inuseFilter].Add(e)
 		sbf.n++
 	} else {
 		if sbf.p == sbf.q {
 			return
 		}
 		sbf.s = sbf.s * sbf.r
-		bf := newBloomFilter(sbf.k, sbf.s)
+		bf := NewBloomFilter(sbf.k, sbf.s)
 		sbf.bfArr = append(sbf.bfArr, *bf)
 		sbf.q++
 		inuseFilter = sbf.q - 1
-		sbf.bfArr[inuseFilter].add(e)
+		sbf.bfArr[inuseFilter].Add(e)
 		sbf.n++
 	}
 }
 
-func (sbf *ScalableBloomFilter) falsePositiveRate() float64 {
+func (sbf *ScalableBloomFilter) FalsePositiveRate() float64 {
 	res := 1.0
 	for i := 0; i < sbf.q; i++ {
 		res *= (1.0 - sbf.bfArr[i].FalsePositiveRate())
@@ -167,9 +167,9 @@ func (sbf *ScalableBloomFilter) falsePositiveRate() float64 {
 	return 1.0 - res
 }
 
-func (sbf *ScalableBloomFilter) check(e []byte) bool {
+func (sbf *ScalableBloomFilter) Check(e []byte) bool {
 	for i := 0; i < sbf.q; i++ {
-		if sbf.bfArr[i].check(e) {
+		if sbf.bfArr[i].Check(e) {
 			return true
 		}
 	}
