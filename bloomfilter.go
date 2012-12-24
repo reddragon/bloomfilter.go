@@ -6,6 +6,8 @@ import (
 	"math"
 )
 
+// The standard bloom filter, which allows adding of 
+// elements, and checking for their existence
 type BloomFilter struct {
 	bitmap []bool      // The bloom-filter bitmap
 	k      int         // Number of hash functions
@@ -14,10 +16,13 @@ type BloomFilter struct {
 	hashfn hash.Hash64 // The hash function
 }
 
-func NewBloomFilter(k, m int) *BloomFilter {
+// Returns a new BloomFilter object, if you pass the 
+// number of Hash Functions to use and the maximum
+// size of the Bloom Filter
+func NewBloomFilter(numHashFuncs, bfSize int) *BloomFilter {
 	bf := new(BloomFilter)
-	bf.bitmap = make([]bool, m)
-	bf.k, bf.m = k, m
+	bf.bitmap = make([]bool, bfSize)
+	bf.k, bf.m = numHashFuncs, bfSize
 	bf.n = 0
 	bf.hashfn = fnv.New64()
 	return bf
@@ -32,6 +37,7 @@ func (bf *BloomFilter) getHash(b []byte) (uint32, uint32) {
 	return h1, h2
 }
 
+// Adds an element (in byte-array form) to the Bloom Filter
 func (bf *BloomFilter) Add(e []byte) {
 	h1, h2 := bf.getHash(e)
 	for i := 0; i < bf.k; i++ {
@@ -41,6 +47,8 @@ func (bf *BloomFilter) Add(e []byte) {
 	bf.n++
 }
 
+// Checks if an element (in byte-array form) exists in the 
+// Bloom Filter
 func (bf *BloomFilter) Check(x []byte) bool {
 	h1, h2 := bf.getHash(x)
 	result := true
@@ -51,11 +59,15 @@ func (bf *BloomFilter) Check(x []byte) bool {
 	return result
 }
 
+// Returns the current False Positive Rate of the Bloom Filter
 func (bf *BloomFilter) FalsePositiveRate() float64 {
 	return math.Pow((1 - math.Exp(-float64(bf.k*bf.n)/
 		float64(bf.m))), float64(bf.k))
 }
 
+// A Bloom Filter which allows deletion of elements. 
+// An 8-bit counter is maintained for each slot. This should
+// be accounted for while deciding the size of the new filter.
 type CountingBloomFilter struct {
 	counts []uint8     // The bloom-filter bitmap
 	k      int         // Number of hash functions
@@ -64,10 +76,11 @@ type CountingBloomFilter struct {
 	hashfn hash.Hash64 // The hash function
 }
 
-func NewCountingBloomFilter(k, m int) *CountingBloomFilter {
+// Creates a new Counting Bloom Filter
+func NewCountingBloomFilter(numHashFuncs, cbfSize int) *CountingBloomFilter {
 	cbf := new(CountingBloomFilter)
-	cbf.counts = make([]uint8, m)
-	cbf.k, cbf.m = k, m
+	cbf.counts = make([]uint8, cbfSize)
+	cbf.k, cbf.m = numHashFuncs, cbfSize
 	cbf.n = 0
 	cbf.hashfn = fnv.New64()
 	return cbf
@@ -82,6 +95,7 @@ func (cbf *CountingBloomFilter) getHash(b []byte) (uint32, uint32) {
 	return h1, h2
 }
 
+// Adds an element (in byte-array form) to the Counting Bloom Filter
 func (cbf *CountingBloomFilter) Add(e []byte) {
 	h1, h2 := cbf.getHash(e)
 	for i := 0; i < cbf.k; i++ {
@@ -94,6 +108,7 @@ func (cbf *CountingBloomFilter) Add(e []byte) {
 	cbf.n++
 }
 
+// Removes an element (in byte-array form) from the Counting Bloom Filter
 func (cbf *CountingBloomFilter) Remove(e []byte) {
 	h1, h2 := cbf.getHash(e)
 	for i := 0; i < cbf.k; i++ {
@@ -107,6 +122,8 @@ func (cbf *CountingBloomFilter) Remove(e []byte) {
 	cbf.n--
 }
 
+// Checks if an element (in byte-array form) exists in the 
+// Counting Bloom Filter
 func (cbf *CountingBloomFilter) Check(x []byte) bool {
 	h1, h2 := cbf.getHash(x)
 	result := true
@@ -117,6 +134,8 @@ func (cbf *CountingBloomFilter) Check(x []byte) bool {
 	return result
 }
 
+// A scalable bloom filter, which allows adding of 
+// elements, and checking for their existence
 type ScalableBloomFilter struct {
 	bfArr []BloomFilter // The list of Bloom Filters
 	k     int           // Number of hash functions
@@ -129,16 +148,27 @@ type ScalableBloomFilter struct {
 	f     float64       // Target False Positive rate / bf
 }
 
-func NewScalableBloomFilter(k, m, p, r int, f float64) *ScalableBloomFilter {
+// Returns a new Scalable BloomFilter object, if you pass in
+// valid values for all the required fields.
+// firstBFSize is the size of the first Bloom Filter which
+// will be created.
+// maxBloomFilters is the upper limit on the number of 
+// Bloom Filters to create
+// growthFactor is the rate at which the Bloom Filter size grows.
+// targetFPR is the maximum false positive rate allowed for each
+// of the constituent bloom filters, after which a new Bloom
+// Filter would be created and used
+func NewScalableBloomFilter(numHashFuncs, firstBFSize, maxBloomFilters, growthFactor int, targetFPR float64) *ScalableBloomFilter {
 	sbf := new(ScalableBloomFilter)
-	sbf.k, sbf.n, sbf.m, sbf.p, sbf.q, sbf.r, sbf.f = k, 0, m, p, 1, r, f
+	sbf.k, sbf.n, sbf.m, sbf.p, sbf.q, sbf.r, sbf.f = numHashFuncs, 0, firstBFSize, maxBloomFilters, 1, growthFactor, targetFPR
 	sbf.s = sbf.m
-	sbf.bfArr = make([]BloomFilter, 0, p)
+	sbf.bfArr = make([]BloomFilter, 0, maxBloomFilters)
 	bf := NewBloomFilter(sbf.k, sbf.m)
 	sbf.bfArr = append(sbf.bfArr, *bf)
 	return sbf
 }
 
+// Adds an element of type byte-array to the Bloom Filter
 func (sbf *ScalableBloomFilter) Add(e []byte) {
 	inuseFilter := sbf.q - 1
 	fpr := sbf.bfArr[inuseFilter].FalsePositiveRate()
@@ -159,6 +189,7 @@ func (sbf *ScalableBloomFilter) Add(e []byte) {
 	}
 }
 
+// Returns the cumulative False Positive Rate of the filter
 func (sbf *ScalableBloomFilter) FalsePositiveRate() float64 {
 	res := 1.0
 	for i := 0; i < sbf.q; i++ {
@@ -167,6 +198,7 @@ func (sbf *ScalableBloomFilter) FalsePositiveRate() float64 {
 	return 1.0 - res
 }
 
+// Checks if an element (in byte-array form) exists
 func (sbf *ScalableBloomFilter) Check(e []byte) bool {
 	for i := 0; i < sbf.q; i++ {
 		if sbf.bfArr[i].Check(e) {
@@ -175,3 +207,4 @@ func (sbf *ScalableBloomFilter) Check(e []byte) bool {
 	}
 	return false
 }
+
