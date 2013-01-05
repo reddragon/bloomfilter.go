@@ -56,9 +56,16 @@ I have written a couple of simple tests, which you can see in `bloomfilter_test.
 
 References
 ----------
-- Scalable Bloom Filters - Paulo Sérgio Almeida, Carlos Baquero, Nuno Preguiça, David Hutchison, 
-  http://www.sciencedirect.com/science/article/pii/S0020019006003127
+- [Scalable Bloom Filters - Paulo Sérgio Almeida, Carlos Baquero, Nuno Preguiça, David Hutchison](http://www.sciencedirect.com/science/article/pii/S0020019006003127)
 - https://github.com/bitly/dablooms
 - https://github.com/willf/bloom
-- Less Hashing, Same Performance: Building a Better Bloom Filter - Adam Kirsch and Michael Mitzenmacher
-  http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
+- [Less Hashing, Same Performance: Building a Better Bloom Filter - Adam Kirsch and Michael Mitzenmacher](http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf)
+- [Analysis for the false positive rate in Scalable Bloom Filters](http://blog.gaurav.im/?p=278)
+
+Credits
+-------
+Thanks to [Aditya](https://github.com/truncs) for suggesting the idea and pointers.
+
+Author
+------
+Gaurav Menghani
