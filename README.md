@@ -59,7 +59,7 @@ References
 - [Scalable Bloom Filters - Paulo Sérgio Almeida, Carlos Baquero, Nuno Preguiça, David Hutchison](http://www.sciencedirect.com/science/article/pii/S0020019006003127)
 - https://github.com/bitly/dablooms
 - https://github.com/willf/bloom
-- [Less Hashing, Same Performance: Building a Better Bloom Filter - Adam Kirsch and Michael Mitzenmacher](http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf)
+- [Less Hashing, Same Performance: Building a Better Bloom Filter - Adam Kirsch and Michael Mitzenmacher](https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf)
 - [Analysis for the false positive rate in Scalable Bloom Filters](http://blog.gaurav.im/2012/12/21/scalable-bloom-filters-in-go/)
 
 Credits
